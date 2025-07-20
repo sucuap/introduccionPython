@@ -5,7 +5,7 @@ from tkinter import ttk, messagebox
 CATEGORIA_GENERICA = "Sin categoría"
 NOMBRE_BD = "entregaFinal.db"
 
-listaProductos = []  # Lista de productos: [id, nombre, precio, categoría]
+listaProductos = []  # Lista de productos: [id, nombre, precio, id_categoría]
 
 listaCategorias = [] # Lista de categorías: [id, nombre]
 
@@ -41,14 +41,17 @@ def configuracionBD():
 
     conexionBD.commit()
 
+def obtenerNombreCategoria(idCategoriaProducto):
+    return " ".join(arbolCategoriasMostradas.item(idCategoriaProducto)['values'])
+
 def cargarProductosDesdeBD():
-    cursor.execute("SELECT p.id, p.nombre, p.precio, c.nombre FROM productos AS p, categorias as C WHERE p.categoria_id = c.id")
-    for idProducto, nombreProducto, precioProducto, nombreCategoria in cursor.fetchall():
-        producto = [idProducto, nombreProducto, precioProducto, nombreCategoria]
+    cursor.execute("SELECT p.id, p.nombre, p.precio, c.id, c.nombre FROM productos AS p, categorias as C WHERE p.categoria_id = c.id")
+    for idProducto, nombreProducto, precioProducto, idCategoria, nombreCategoria in cursor.fetchall():
+        producto = [idProducto, nombreProducto, precioProducto, idCategoria]
         if producto not in listaProductos:
             listaProductos.append(producto)
 
-        arbolProductosMostrados.insert('', 'end', iid=idProducto, values=(f"{nombreProducto}", f"${precioProducto}", f"{nombreCategoria}"))
+        arbolProductosMostrados.insert('', 'end', iid=idProducto, values=(nombreProducto, f"${precioProducto}", nombreCategoria))
 
 def cargarCategoriasDesdeBD():
     cursor.execute("SELECT id, nombre FROM categorias ORDER BY nombre")
@@ -60,7 +63,7 @@ def cargarCategoriasDesdeBD():
         if itemCategoria not in listaCategorias:
             listaCategorias.append(itemCategoria)
 
-        arbolCategoriasMostradas.insert('', 'end', iid=idCategoria, values=(f"{nombreCategoria}"))
+        arbolCategoriasMostradas.insert('', 'end', iid=idCategoria, values=(nombreCategoria))
 
 def altaProducto():
     nombreProducto = inputNombre.get()
@@ -79,10 +82,8 @@ def altaProducto():
                (nombreProducto, precioProducto, idCategoriaSeleccionada))
         conexionBD.commit()
 
-
-        nombreCategoriaProductoAgregado = " ".join(arbolCategoriasMostradas.item(idCategoriaSeleccionada)['values'])
-        listaProductos.append([cursor.lastrowid, nombreProducto, precioProducto, nombreCategoriaProductoAgregado])
-        arbolProductosMostrados.insert('', 'end', iid=cursor.lastrowid, values=(f"{nombreProducto}", f"${precioProducto}", f"{nombreCategoriaProductoAgregado}"))
+        listaProductos.append([cursor.lastrowid, nombreProducto, precioProducto, idCategoriaSeleccionada])
+        arbolProductosMostrados.insert('', 'end', iid=cursor.lastrowid, values=(nombreProducto, f"${precioProducto}", obtenerNombreCategoria(idCategoriaSeleccionada)))
         deseleccionDeInputs()
     else:
         messagebox.showwarning("Dejaste algún campos vacío", "Por favor completá todos los campos.")
@@ -97,7 +98,7 @@ def altaCategoria():
         conexionBD.commit()
 
         listaCategorias.append({"id": cursor.lastrowid, "nombre": nombreNuevaCategoria})
-        arbolCategoriasMostradas.insert('', 'end', iid=cursor.lastrowid, values=(f"{nombreNuevaCategoria}"))
+        arbolCategoriasMostradas.insert('', 'end', iid=cursor.lastrowid, values=(nombreNuevaCategoria))
         inputCategoria.delete(0, tk.END)
     except sql.IntegrityError:
         messagebox.showerror("Error", "La categoría ya existe.")
@@ -105,6 +106,7 @@ def altaCategoria():
 def deseleccionDeInputs():
     inputNombre.delete(0, tk.END)
     inputPrecio.delete(0, tk.END)
+    inputCategoria.delete(0, tk.END)
     arbolProductosMostrados.selection_remove(arbolProductosMostrados.selection())
     arbolCategoriasMostradas.selection_remove(arbolCategoriasMostradas.selection())
     filtrarProductos()
@@ -134,9 +136,8 @@ def modificacionProducto():
             productoIterado[1] = nombreProductoEditado
             productoIterado[2] = precioIngresado
             idCategoriaSeleccionada = int(categoriaProductoEditado[0])
-            nombreCategoriaProductoEditado = " ".join(arbolCategoriasMostradas.item(idCategoriaSeleccionada)['values'])
-            productoIterado[3] = nombreCategoriaProductoEditado
-            arbolProductosMostrados.item(idProductoSeleccionado, values=(f"{nombreProductoEditado}", f"${precioIngresado}", nombreCategoriaProductoEditado))
+            productoIterado[3] = idCategoriaSeleccionada
+            arbolProductosMostrados.item(idProductoSeleccionado, values=(nombreProductoEditado, f"${precioIngresado}", obtenerNombreCategoria(idCategoriaSeleccionada)))
 
             cursor.execute('UPDATE productos SET nombre=?, precio=?, categoria_id=? WHERE id=?',
                (nombreProductoEditado, precioIngresado, idCategoriaSeleccionada, idProductoSeleccionado))
@@ -164,7 +165,7 @@ def modificacionCategoria():
             categoriaIterada['nombre'] = nombreCategoriaModificado
             break
 
-    arbolCategoriasMostradas.item(idCategoriaSeleccionada, values=(f"{nombreCategoriaModificado}"))
+    arbolCategoriasMostradas.item(idCategoriaSeleccionada, values=(nombreCategoriaModificado))
 
     try:
         cursor.execute("UPDATE categorias SET nombre = ? WHERE id = ?", (nombreCategoriaModificado, idCategoriaSeleccionada))
@@ -173,6 +174,9 @@ def modificacionCategoria():
         inputCategoria.delete(0, tk.END)
     except sql.IntegrityError:
         messagebox.showerror("Error", "Ya existe una categoría con ese nombre.")
+
+    limpiezaArbolProductosMostrados() 
+    cargarProductosDesdeBD()
 
 def bajaProducto():
     productoSeleccionado = arbolProductosMostrados.selection()
@@ -226,35 +230,35 @@ def cargarProductoSeleccionado(event):
     if not productoSeleccionado:
         return
     idProductoSeleccionado = int(productoSeleccionado[0])
-    for [idProducto, nombreProducto, precioProducto, categoriaProducto] in listaProductos:
+    for [idProducto, nombreProducto, precioProducto, idCategoriaProducto] in listaProductos:
         if idProducto == idProductoSeleccionado:
             inputNombre.delete(0, tk.END)
             inputPrecio.delete(0, tk.END)
             inputNombre.insert(0, nombreProducto)
             inputPrecio.insert(0, str(precioProducto))
-            if arbolCategoriasMostradas.exists(categoriaProducto):
-                arbolCategoriasMostradas.selection_set(categoriaProducto)
-                arbolCategoriasMostradas.see(categoriaProducto)  # Hace scroll si está fuera de vista
+            if arbolCategoriasMostradas.exists(idCategoriaProducto):
+                arbolCategoriasMostradas.selection_set(idCategoriaProducto)
+                arbolCategoriasMostradas.see(idCategoriaProducto)  # Hace scroll si está fuera de vista
             break
 
 def cargarCategoriaSeleccionada(event):
     categoriaSeleccionada = arbolCategoriasMostradas.selection()
     if not categoriaSeleccionada:
         return
-    idCategoriaSeleccionada = int(categoriaSeleccionada[0])
-    nombreCategoria = " ".join(arbolCategoriasMostradas.item(idCategoriaSeleccionada)['values'])
     inputCategoria.delete(0, tk.END)
-    inputCategoria.insert(0, nombreCategoria)
+    inputCategoria.insert(0, obtenerNombreCategoria(int(categoriaSeleccionada[0])))
 
-def filtrarProductos(event=None):
-    palabraclaveingresadaBusquedaProducto = inputBusqueda.get().lower()
-
+def limpiezaArbolProductosMostrados():
     for productoMostrado in arbolProductosMostrados.get_children():
         arbolProductosMostrados.delete(productoMostrado)
 
-    for producto in listaProductos:
-        if palabraclaveingresadaBusquedaProducto in producto[1].lower():
-            arbolProductosMostrados.insert('', 'end', iid=producto[0], values=(f"{producto[1]}", f"${producto[2]}", f"{producto[3]}"))
+def filtrarProductos(event=None):
+    palabraclaveingresadaBusquedaProducto = inputBusqueda.get().lower()
+    limpiezaArbolProductosMostrados() 
+
+    for [idProducto, nombreProducto, precioProducto, idCategoriaProducto] in listaProductos:
+        if palabraclaveingresadaBusquedaProducto in nombreProducto.lower():
+            arbolProductosMostrados.insert('', 'end', iid=idProducto, values=(nombreProducto, f"${precioProducto}", obtenerNombreCategoria(idCategoriaProducto)))
 
 def cerrarBD():
     conexionBD.close()
@@ -281,35 +285,52 @@ tk.Button(ventanaPrincipal, text="Agregar producto", command=altaProducto).grid(
 tk.Button(ventanaPrincipal, text="Editar producto", command=modificacionProducto).grid(row=1, column=2)
 tk.Button(ventanaPrincipal, text="Eliminar producto", command=bajaProducto).grid(row=2, column=2)
 
+# Sección categoría
+tk.Label(ventanaPrincipal, text="Categoría").grid(row=4, column=0)
+inputCategoria = tk.Entry(ventanaPrincipal)
+inputCategoria.grid(row=4, column=1)
+
+tk.Button(ventanaPrincipal, text="Agregar categoría", command=altaCategoria).grid(row=3, column=2)
+tk.Button(ventanaPrincipal, text="Editar categoría", command=modificacionCategoria).grid(row=4, column=2)
+tk.Button(ventanaPrincipal, text="Eliminar categoría", command=bajaCategoria).grid(row=5, column=2)
+
 # Búsqueda
-tk.Label(ventanaPrincipal, text="Buscar producto por nombre").grid(row=3, column=0)
+tk.Label(ventanaPrincipal, text="Buscar producto por nombre").grid(row=6, column=0)
 inputBusqueda = tk.Entry(ventanaPrincipal)
-inputBusqueda.grid(row=3, column=1, columnspan=2, sticky='we')
+inputBusqueda.grid(row=6, column=1, columnspan=2, sticky='we')
 inputBusqueda.bind("<KeyRelease>", filtrarProductos)
 
+frameProductos = tk.Frame(ventanaPrincipal)
+frameProductos.grid(row=7, column=0, columnspan=3, padx=5, pady=10, sticky='nsew')
+
+scrollbarProductos = ttk.Scrollbar(frameProductos, orient="vertical")
+scrollbarProductos.grid(row=0, column=1, sticky='ns')
+
 # Tabla Principal
-arbolProductosMostrados = ttk.Treeview(ventanaPrincipal, columns=("Nombre", "Precio", "Categoría"), show='headings', height=5)
+arbolProductosMostrados = ttk.Treeview(frameProductos, columns=("Nombre", "Precio", "Categoría"), show='headings', yscrollcommand=scrollbarProductos.set)
 arbolProductosMostrados.heading("Nombre", text="Nombre")
 arbolProductosMostrados.heading("Precio", text="Precio")
 arbolProductosMostrados.heading("Categoría", text="Categoría")
-arbolProductosMostrados.grid(row=4, column=0, columnspan=3, padx=5, pady=10)
 arbolProductosMostrados.bind('<<TreeviewSelect>>', cargarProductoSeleccionado)
+arbolProductosMostrados.grid(row=0, column=0, sticky='nsew')
+scrollbarProductos.config(command=arbolProductosMostrados.yview)
+frameProductos.grid_rowconfigure(0, weight=1)
+frameProductos.grid_columnconfigure(0, weight=1)
 
-tk.Label(ventanaPrincipal, text="Categorías").grid(row=5, column=0, pady=(20, 0))
+tk.Label(ventanaPrincipal, text="Categorías").grid(row=8, column=0, pady=(20, 0))
+
+frameCategorias = tk.Frame(ventanaPrincipal)
+frameCategorias.grid(row=9, column=0, columnspan=3, padx=5, pady=10, sticky='nsew')
+
+scrollbarCategorias = ttk.Scrollbar(frameCategorias, orient="vertical")
+scrollbarCategorias.grid(row=0, column=1, sticky='ns')
 
 # Tabla de Categorías
-arbolCategoriasMostradas = ttk.Treeview(ventanaPrincipal, columns=("Nombre"), show='headings', height=5)
+arbolCategoriasMostradas = ttk.Treeview(frameCategorias, columns=("Nombre"), show='headings', yscrollcommand=scrollbarCategorias.set)
 arbolCategoriasMostradas.heading("Nombre", text="Nombre")
-arbolCategoriasMostradas.grid(row=6, column=0, columnspan=3, pady=5)
+arbolCategoriasMostradas.grid(row=0, column=0, sticky='nsew')
 arbolCategoriasMostradas.bind("<<TreeviewSelect>>", cargarCategoriaSeleccionada)
-
-tk.Label(ventanaPrincipal, text="Nombre categoría").grid(row=7, column=0)
-inputCategoria = tk.Entry(ventanaPrincipal)
-inputCategoria.grid(row=7, column=1)
-
-tk.Button(ventanaPrincipal, text="Agregar categoría", command=altaCategoria).grid(row=7, column=2)
-tk.Button(ventanaPrincipal, text="Editar categoría", command=modificacionCategoria).grid(row=8, column=1)
-tk.Button(ventanaPrincipal, text="Eliminar categoría", command=bajaCategoria).grid(row=8, column=2)
+scrollbarCategorias.config(command=arbolCategoriasMostradas.yview)
 
 cargarProductosDesdeBD()
 cargarCategoriasDesdeBD()
