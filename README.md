@@ -1,58 +1,60 @@
-# 🧾 Inventario de Productos
+# 🧾 Inventario de Productos — Tkinter + SQLite
 
-Este proyecto es una aplicación de escritorio desarrollada en **Python** usando **Tkinter** para la interfaz gráfica y **SQLite** para la persistencia de datos. Permite gestionar un inventario de productos con funcionalidades completas de CRUD tanto para productos como para categorías.
+Este proyecto es una aplicación de escritorio desarrollada en **Python** utilizando **Tkinter** para la interfaz gráfica y **SQLite** para la persistencia de datos. Permite gestionar un inventario de productos con funcionalidades completas de CRUD tanto para productos como para sus categorías.
+
+📍 Repositorio oficial: [https://github.com/sucuap/introduccionPython](https://github.com/sucuap/introduccionPython)
 
 ---
 
-## 🚀 Características
+## 🚀 Funcionalidades
 
 - Alta, modificación y baja de productos
-- Gestión de categorías con opción a crear, editar y eliminar (excepto la genérica "Sin categoría")
+- Gestión completa de categorías (crear, editar, eliminar)
 - Filtro de productos por nombre
-- Aviso visual para productos con baja cantidad
-- Interfaz amigable y simple
-- Persistencia con base de datos `inventario.db`
+- Advertencia para productos con cantidad por debajo de un umbral definido por el usuario
+- Interfaz clara y amigable
+- Persistencia en disco con base de datos `inventario.db`
 
 ---
 
 ## 🗃️ Estructura de la base de datos
 
-La base de datos `inventario.db` contiene las siguientes tablas:
+La base de datos `inventario.db` contiene dos tablas principales:
 
-### 🛍️ productos
+### 🛍️ Tabla `productos`
 
-| Columna    | Tipo     | Descripción                           |
-|------------|----------|---------------------------------------|
-| `id`       | INTEGER  | Clave primaria, autoincremental       |
-| `nombre`   | TEXT     | Nombre del producto (no nulo)         |
-| `descripcion` | TEXT | Descripción opcional                  |
-| `cantidad` | INTEGER  | Cantidad disponible (no nulo)         |
-| `precio`   | REAL     | Precio del producto (no nulo)         |
-| `categoria_id` | INTEGER | Clave foránea a la tabla `categorias` |
+| Columna        | Tipo     | Descripción                                    |
+|----------------|----------|------------------------------------------------|
+| `id`           | INTEGER  | Clave primaria, autoincremental                |
+| `nombre`       | TEXT     | Nombre del producto (no nulo)                  |
+| `descripcion`  | TEXT     | Breve descripción del producto (opcional)      |
+| `cantidad`     | INTEGER  | Stock disponible (no nulo)                     |
+| `precio`       | REAL     | Precio del producto (no nulo)                  |
+| `categoria_id` | INTEGER  | ID de categoría (clave foránea a `categorias`) |
 
-### 🗂️ categorias
+### 🗂️ Tabla `categorias`
 
-| Columna    | Tipo     | Descripción                         |
-|------------|----------|-------------------------------------|
-| `id`       | INTEGER  | Clave primaria, autoincremental     |
-| `nombre`   | TEXT     | Nombre de la categoría (único, no nulo) |
+| Columna    | Tipo     | Descripción                                      |
+|------------|----------|--------------------------------------------------|
+| `id`       | INTEGER  | Clave primaria, autoincremental                  |
+| `nombre`   | TEXT     | Nombre de la categoría (único, no nulo)          |
 
-> 🔒 La categoría `"Sin categoría"` se crea por defecto y no puede eliminarse.
+> 🔒 La categoría por defecto `"Sin categoría"` es permanente y no puede eliminarse.
 
 ---
 
 ## 💻 Requisitos
 
 - Python 3.x
-- Paquetes estándar (`tkinter`, `sqlite3`)
+- Módulos estándar (`tkinter`, `sqlite3`)
 
-No se requiere instalación de librerías externas.
+No es necesario instalar paquetes adicionales.
 
 ---
 
-## 🧰 Cómo usar
+## ▶️ Instrucciones de uso
 
-1. Cloná este repositorio:
+1. Cloná el repositorio:
    ```bash
-   git clone https://github.com/tuusuario/inventario-productos.git
-   cd inventario-productos
+   git clone https://github.com/sucuap/introduccionPython
+   cd introduccionPython
